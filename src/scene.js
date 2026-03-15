@@ -30,6 +30,7 @@ export class MusicScene {
       canvas: this.canvas,
       antialias: true,
       alpha: false,
+      preserveDrawingBuffer: true, // 스크린샷 캡처를 위해 필요
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);

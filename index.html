@@ -9,33 +9,89 @@
 <body>
   <canvas id="bg"></canvas>
 
-  <!-- 컨트롤 패널 -->
-  <div id="ui">
-    <div id="logo">🎵 MusicGround</div>
+  <!-- 드래그앤드롭 오버레이 -->
+  <div id="drop-overlay">
+    <div class="drop-message">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+      </svg>
+      <span>오디오 파일을 여기에 놓으세요</span>
+    </div>
+  </div>
 
+  <!-- 메인 UI 패널 -->
+  <div id="ui">
+    <div id="logo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+      </svg>
+      MusicGround
+    </div>
+
+    <!-- 입력 소스 버튼 -->
     <div id="controls">
-      <button id="btn-mic" class="btn btn-primary">
-        <span class="icon">🎤</span>
-        <span class="label">마이크로 시작</span>
+      <button id="btn-file" class="btn btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+        </svg>
+        <span class="label">파일 열기</span>
+      </button>
+      <button id="btn-mic" class="btn btn-secondary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+          <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+        <span class="label">마이크</span>
       </button>
       <button id="btn-system" class="btn btn-secondary">
-        <span class="icon">🔊</span>
-        <span class="label">시스템 오디오 캡처</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+        </svg>
+        <span class="label">시스템</span>
       </button>
     </div>
 
+    <!-- 숨겨진 파일 입력 -->
+    <input type="file" id="file-input" accept="audio/*" style="display:none" />
+
+    <!-- 상태 표시 -->
     <div id="status">
       <div id="status-dot"></div>
-      <span id="status-text">음악을 선택하세요</span>
+      <span id="status-text">파일을 열거나 오디오를 선택하세요</span>
     </div>
 
+    <!-- 파일 재생 플레이어 -->
+    <div id="player" class="hidden">
+      <div id="track-name">—</div>
+      <div id="progress-area">
+        <span id="time-current">0:00</span>
+        <div id="progress-bar">
+          <div id="progress-fill"></div>
+          <div id="progress-thumb"></div>
+        </div>
+        <span id="time-total">0:00</span>
+      </div>
+      <div id="player-controls">
+        <button id="btn-play-pause" class="player-btn" title="재생/일시정지 (Space)">
+          <svg id="icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 오디오 정보 -->
     <div id="info-box">
       <div class="info-row">
-        <span class="info-label">주파수 분위기</span>
+        <span class="info-label">분위기</span>
         <span id="mood-text" class="info-value">—</span>
       </div>
       <div class="info-row">
-        <span class="info-label">BPM 추정</span>
+        <span class="info-label">BPM</span>
         <span id="bpm-text" class="info-value">—</span>
       </div>
       <div class="info-row">
@@ -44,6 +100,7 @@
       </div>
     </div>
 
+    <!-- 테마 선택 -->
     <div id="theme-selector">
       <span class="theme-label">테마</span>
       <div id="themes">
@@ -54,8 +111,28 @@
       </div>
     </div>
 
-    <div id="tip">
-      💡 시스템 오디오는 Chrome에서 화면 공유 → 탭/창 오디오 캡처로 동작합니다
+    <!-- 하단 액션 -->
+    <div id="action-bar">
+      <button id="btn-screenshot" class="action-btn" title="스크린샷 저장 (S)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        스크린샷
+      </button>
+      <button id="btn-fullscreen" class="action-btn" title="전체화면 (F)">
+        <svg id="icon-fullscreen-enter" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+        </svg>
+        <svg id="icon-fullscreen-exit" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
+        </svg>
+        <span id="fullscreen-label">전체화면</span>
+      </button>
+    </div>
+
+    <div id="shortcuts-hint">
+      <kbd>Space</kbd> 재생/정지 &nbsp;·&nbsp; <kbd>F</kbd> 전체화면 &nbsp;·&nbsp; <kbd>S</kbd> 스크린샷
     </div>
   </div>
 
