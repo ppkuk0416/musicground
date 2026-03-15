@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MusicGround — 음악 반응형 3D 배경화면</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <!-- 컨트롤 패널 -->
+  <div id="ui">
+    <div id="logo">🎵 MusicGround</div>
+
+    <div id="controls">
+      <button id="btn-mic" class="btn btn-primary">
+        <span class="icon">🎤</span>
+        <span class="label">마이크로 시작</span>
+      </button>
+      <button id="btn-system" class="btn btn-secondary">
+        <span class="icon">🔊</span>
+        <span class="label">시스템 오디오 캡처</span>
+      </button>
+    </div>
+
+    <div id="status">
+      <div id="status-dot"></div>
+      <span id="status-text">음악을 선택하세요</span>
+    </div>
+
+    <div id="info-box">
+      <div class="info-row">
+        <span class="info-label">주파수 분위기</span>
+        <span id="mood-text" class="info-value">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">BPM 추정</span>
+        <span id="bpm-text" class="info-value">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">에너지</span>
+        <span id="energy-text" class="info-value">—</span>
+      </div>
+    </div>
+
+    <div id="theme-selector">
+      <span class="theme-label">테마</span>
+      <div id="themes">
+        <button class="theme-btn active" data-theme="cosmic">우주</button>
+        <button class="theme-btn" data-theme="ocean">바다</button>
+        <button class="theme-btn" data-theme="forest">숲</button>
+        <button class="theme-btn" data-theme="fire">불꽃</button>
+      </div>
+    </div>
+
+    <div id="tip">
+      💡 시스템 오디오는 Chrome에서 화면 공유 → 탭/창 오디오 캡처로 동작합니다
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
