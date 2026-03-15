@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import { THEMES } from './themes.js';
 
+const _MAX_PARTICLES = 4000;
+
 export class MusicScene {
   constructor(canvas) {
     this.canvas = canvas;
     this.themeName = 'cosmic';
     this.theme = THEMES.cosmic;
+    this.sensitivity = 1.0;
+    this._baseParticleSize = THEMES.cosmic.particleSize;
+    this._visibleParticleCount = THEMES.cosmic.particleCount;
 
     this._initRenderer();
     this._initScene();
@@ -15,7 +20,6 @@ export class MusicScene {
     this._clock = new THREE.Clock();
     this._time = 0;
 
-    // 애니메이션 루프
     this._animate = this._animate.bind(this);
     this._animate();
 
@@ -30,7 +34,7 @@ export class MusicScene {
       canvas: this.canvas,
       antialias: true,
       alpha: false,
-      preserveDrawingBuffer: true, // 스크린샷 캡처를 위해 필요
+      preserveDrawingBuffer: true,
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -66,7 +70,6 @@ export class MusicScene {
   }
 
   _buildBackground() {
-    // 배경 그라디언트 큐브맵 대신 큰 구(sphere)로 내부 그라디언트 표현
     const geo = new THREE.SphereGeometry(500, 32, 16);
     const mat = new THREE.MeshBasicMaterial({
       color: this.theme.bg[0],
@@ -78,7 +81,7 @@ export class MusicScene {
 
   _buildParticles() {
     const t = this.theme;
-    const count = t.particleCount;
+    const count = _MAX_PARTICLES;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const scales = new Float32Array(count);
@@ -87,7 +90,6 @@ export class MusicScene {
     const c2 = new THREE.Color(t.secondary[0]);
 
     for (let i = 0; i < count; i++) {
-      // 구 분포
       const r = 30 + Math.random() * 120;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
@@ -108,8 +110,8 @@ export class MusicScene {
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
     geo.setAttribute('aScale',   new THREE.BufferAttribute(scales, 1));
+    geo.setDrawRange(0, t.particleCount);
 
-    // 원형 스프라이트 텍스처 생성
     const tex = this._makeCircleTexture(64);
 
     this._particleMat = new THREE.PointsMaterial({
@@ -122,7 +124,6 @@ export class MusicScene {
     });
 
     this.particles = new THREE.Points(geo, this._particleMat);
-    this._particlePositions = positions; // 원본 복사본 저장
     this._particleOrigins = positions.slice();
     this.scene.add(this.particles);
   }
@@ -141,7 +142,6 @@ export class MusicScene {
   }
 
   _buildWaveRing() {
-    // 토러스 형태의 파형 링
     const segments = 256;
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(segments * 3);
@@ -169,7 +169,6 @@ export class MusicScene {
     this.waveRing = new THREE.LineLoop(geo, mat);
     this.scene.add(this.waveRing);
 
-    // 두 번째 링 (반대 회전)
     this.waveRing2 = this.waveRing.clone();
     this.waveRing2.material = mat.clone();
     this.waveRing2.material.color.set(this.theme.secondary[0]);
@@ -178,7 +177,6 @@ export class MusicScene {
   }
 
   _buildCoreOrb() {
-    // 중앙 코어 오브: 음악 에너지에 따라 팽창
     const geo = new THREE.IcosahedronGeometry(5, 6);
     const mat = new THREE.MeshPhongMaterial({
       color: this.theme.primary[0],
@@ -192,7 +190,6 @@ export class MusicScene {
     this.coreOrb = new THREE.Mesh(geo, mat);
     this.scene.add(this.coreOrb);
 
-    // 외부 글로우
     const glowGeo = new THREE.IcosahedronGeometry(6, 4);
     const glowMat = new THREE.MeshBasicMaterial({
       color: this.theme.primary[0],
@@ -204,7 +201,6 @@ export class MusicScene {
     this.coreGlow = new THREE.Mesh(glowGeo, glowMat);
     this.scene.add(this.coreGlow);
 
-    // 와이어프레임 레이어
     const wireMat = new THREE.MeshBasicMaterial({
       color: this.theme.accent[0],
       wireframe: true,
@@ -218,7 +214,6 @@ export class MusicScene {
   }
 
   _buildFreqBars() {
-    // 주파수 막대 — 오브 주변에 원형으로 배치
     const barCount = 64;
     this._freqBars = [];
 
@@ -265,8 +260,20 @@ export class MusicScene {
     if (name === this.themeName) return;
     this.themeName = name;
     this.theme = THEMES[name];
-    const t = this.theme;
+    this._applyThemeColors(this.theme);
+    this._baseParticleSize = this.theme.particleSize;
+    this.setParticleDensity(this.theme.particleCount / _MAX_PARTICLES);
+  }
 
+  /** 임의 테마 오브젝트를 직접 적용 (커스텀 색상용) */
+  applyCustomTheme(themeObj) {
+    this.themeName = 'custom';
+    this.theme = themeObj;
+    this._applyThemeColors(themeObj);
+    this._baseParticleSize = themeObj.particleSize || 1.5;
+  }
+
+  _applyThemeColors(t) {
     this.bgMesh.material.color.set(t.bg[0]);
     this.scene.fog.color.set(t.fog);
 
@@ -281,18 +288,29 @@ export class MusicScene {
     this._pointLight.color.set(t.primary[0]);
     this._beatLight.color.set(t.accent[0]);
 
-    // 파티클 색 업데이트
     const colors = this.particles.geometry.attributes.color;
     const c1 = new THREE.Color(t.primary[0]);
     const c2 = new THREE.Color(t.secondary[0]);
     for (let i = 0; i < colors.count; i++) {
-      const mix = Math.random();
-      const col = c1.clone().lerp(c2, mix);
+      const col = c1.clone().lerp(c2, Math.random());
       colors.setXYZ(i, col.r, col.g, col.b);
     }
     colors.needsUpdate = true;
 
     this._freqBars.forEach(bar => bar.material.color.set(t.secondary[0]));
+  }
+
+  // ─────────────────────────────────────
+  //  감도 / 파티클 밀도 조절
+  // ─────────────────────────────────────
+  setSensitivity(val) {
+    this.sensitivity = Math.max(0.2, Math.min(4, val));
+  }
+
+  setParticleDensity(frac) {
+    const n = Math.floor(Math.max(0.05, Math.min(1, frac)) * _MAX_PARTICLES);
+    this._visibleParticleCount = n;
+    this.particles.geometry.setDrawRange(0, n);
   }
 
   // ─────────────────────────────────────
@@ -302,21 +320,22 @@ export class MusicScene {
     if (!analyzer || !analyzer.isActive) return;
 
     const { bass, mid, treble, energy, beat, freqData } = analyzer;
-    const bn = bass / 255;
-    const mn = mid / 255;
-    const tn = treble / 255;
+    const s = this.sensitivity;
+    const bn = Math.min((bass   / 255) * s, 1);
+    const mn = Math.min((mid    / 255) * s, 1);
+    const tn = Math.min((treble / 255) * s, 1);
+    const en = Math.min(energy  * s, 1);
 
-    // 코어 오브 크기 변화
-    const targetScale = 1 + bn * 1.8 + energy * 0.5;
-    const s = this.coreOrb.scale;
-    s.x += (targetScale - s.x) * 0.12;
-    s.y = s.z = s.x;
-    this.coreGlow.scale.copy(s).multiplyScalar(1.1);
-    this.coreWire.scale.copy(s).multiplyScalar(1.2);
+    // 코어 오브 크기
+    const targetScale = 1 + bn * 1.8 + en * 0.5;
+    const sc = this.coreOrb.scale;
+    sc.x += (targetScale - sc.x) * 0.12;
+    sc.y = sc.z = sc.x;
+    this.coreGlow.scale.copy(sc).multiplyScalar(1.1);
+    this.coreWire.scale.copy(sc).multiplyScalar(1.2);
 
-    // 코어 발광 강도
     this.coreOrb.material.emissiveIntensity = 0.3 + bn * 1.5;
-    this.coreGlow.material.opacity = 0.05 + energy * 0.25;
+    this.coreGlow.material.opacity = 0.05 + en * 0.25;
 
     // 비트 플래시
     if (beat) {
@@ -325,35 +344,32 @@ export class MusicScene {
       this._beatLight.intensity *= 0.85;
     }
 
-    // 포인트 라이트 강도
-    this._pointLight.intensity = 1 + energy * 3;
+    this._pointLight.intensity = 1 + en * 3;
 
-    // 파형 링 변형
+    // 파형 링
     if (freqData) {
       const count = this._wavePositions.length / 3;
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2;
         const freqIdx = Math.floor((i / count) * freqData.length * 0.5);
-        const amp = (freqData[freqIdx] / 255) * 10;
+        const amp = (freqData[freqIdx] / 255) * 10 * s;
         const r = 20 + amp;
         this._wavePositions[i * 3]     = Math.cos(angle) * r;
         this._wavePositions[i * 3 + 2] = Math.sin(angle) * r;
-        this._wavePositions[i * 3 + 1] = (freqData[freqIdx + 1] / 255 - 0.5) * 8;
+        this._wavePositions[i * 3 + 1] = (freqData[freqIdx + 1] / 255 - 0.5) * 8 * Math.min(s, 2);
       }
       this._waveGeo.attributes.position.needsUpdate = true;
     }
 
-    // 주파수 막대 높이
+    // 주파수 막대
     if (freqData && this._freqBars.length > 0) {
       this._freqBars.forEach((bar, i) => {
         const freqIdx = Math.floor((i / this._freqBars.length) * freqData.length * 0.5);
-        const val = freqData[freqIdx] / 255;
+        const val = Math.min((freqData[freqIdx] / 255) * s, 1);
         const targetH = 0.2 + val * 12;
         bar.scale.y += (targetH - bar.scale.y) * 0.2;
         bar.position.y = bar.scale.y * 0.5;
 
-        // 에너지에 따른 색상 변화
-        const hue = (val * 0.3 + this._time * 0.02) % 1;
         if (beat && val > 0.7) {
           bar.material.color.set(this.theme.accent[0]);
         } else {
@@ -366,22 +382,22 @@ export class MusicScene {
       });
     }
 
-    // 파티클 맥동
+    // 파티클 맥동 — 가시 파티클만 처리
     const pos = this.particles.geometry.attributes.position;
     const origin = this._particleOrigins;
-    const pCount = pos.count;
+    const pCount = this._visibleParticleCount;
+    const factor = 1 + bn * 0.08 + mn * 0.04;
     for (let i = 0; i < pCount; i++) {
-      const ox = origin[i * 3];
-      const oy = origin[i * 3 + 1];
-      const oz = origin[i * 3 + 2];
-      const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
-      const factor = 1 + bn * 0.08 + mn * 0.04;
-      pos.setXYZ(i, ox * factor, oy * factor, oz * factor);
+      pos.setXYZ(
+        i,
+        origin[i * 3]     * factor,
+        origin[i * 3 + 1] * factor,
+        origin[i * 3 + 2] * factor,
+      );
     }
     pos.needsUpdate = true;
 
-    // 파티클 크기 맥동
-    this._particleMat.size = this.theme.particleSize * (1 + energy * 0.8);
+    this._particleMat.size = this._baseParticleSize * (1 + en * 0.8);
   }
 
   // ─────────────────────────────────────
@@ -393,30 +409,25 @@ export class MusicScene {
     this._time += delta;
     const t = this._time;
 
-    // 카메라 완만한 궤도 회전
     this.camera.position.x = Math.sin(t * 0.08) * 60;
     this.camera.position.z = Math.cos(t * 0.08) * 60;
     this.camera.position.y = Math.sin(t * 0.05) * 15;
     this.camera.lookAt(0, 0, 0);
 
-    // 파티클 자전
     this.particles.rotation.y += delta * 0.03;
     this.particles.rotation.x += delta * 0.01;
 
-    // 파형 링 회전
     this.waveRing.rotation.y  += delta * 0.4;
     this.waveRing.rotation.x  = Math.sin(t * 0.3) * 0.3;
     this.waveRing2.rotation.y -= delta * 0.25;
     this.waveRing2.rotation.z  = Math.cos(t * 0.2) * 0.2;
 
-    // 코어 자전
     this.coreOrb.rotation.y  += delta * 0.5;
     this.coreOrb.rotation.x  += delta * 0.3;
     this.coreWire.rotation.y -= delta * 0.4;
     this.coreWire.rotation.z += delta * 0.2;
 
-    // 막대 그룹 자전
-    this._freqBars.forEach((bar, i) => {
+    this._freqBars.forEach((bar) => {
       const angle = bar.userData.angle + t * 0.1;
       const r = bar.userData.radius;
       bar.position.x = Math.cos(angle) * r;

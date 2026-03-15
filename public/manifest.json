@@ -1,0 +1,24 @@
+{
+  "name": "MusicGround",
+  "short_name": "MusicGround",
+  "description": "음악 반응형 3D 배경화면 시각화",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000011",
+  "theme_color": "#000011",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
