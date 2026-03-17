@@ -209,11 +209,33 @@ function toggleFullscreen() {
   }
 }
 
+const ui = document.getElementById('ui');
+let _fsHideTimer = null;
+
+function showUiTemporarily() {
+  ui.classList.remove('fs-hidden');
+  clearTimeout(_fsHideTimer);
+  _fsHideTimer = setTimeout(() => {
+    if (document.fullscreenElement) ui.classList.add('fs-hidden');
+  }, 2500);
+}
+
 document.addEventListener('fullscreenchange', () => {
   const isFs = !!document.fullscreenElement;
   iconFsEnter.style.display = isFs ? 'none' : 'block';
   iconFsExit.style.display  = isFs ? 'block' : 'none';
   fsLabel.textContent       = isFs ? '전체화면 해제' : '전체화면';
+
+  if (isFs) {
+    showUiTemporarily();
+  } else {
+    clearTimeout(_fsHideTimer);
+    ui.classList.remove('fs-hidden');
+  }
+});
+
+document.addEventListener('mousemove', () => {
+  if (document.fullscreenElement) showUiTemporarily();
 });
 
 // ─────────────────────────────────────

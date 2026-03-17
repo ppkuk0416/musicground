@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { THEMES } from './themes.js';
 
 const _MAX_PARTICLES = 4000;
@@ -16,6 +20,8 @@ export class MusicScene {
     this._initScene();
     this._initCamera();
     this._buildScene();
+
+    this._initComposer();
 
     this._clock = new THREE.Clock();
     this._time = 0;
@@ -240,6 +246,23 @@ export class MusicScene {
     }
   }
 
+  _initComposer() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+    this._bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(w, h),
+      1.2,   // strength
+      0.4,   // radius
+      0.1,   // threshold
+    );
+    this.composer.addPass(this._bloomPass);
+    this.composer.addPass(new OutputPass());
+  }
+
   _buildAmbientLight() {
     const ambient = new THREE.AmbientLight(0xffffff, 0.3);
     this.scene.add(ambient);
@@ -398,6 +421,11 @@ export class MusicScene {
     pos.needsUpdate = true;
 
     this._particleMat.size = this._baseParticleSize * (1 + en * 0.8);
+
+    // Bloom — 비트/에너지에 반응
+    this._bloomPass.strength = beat
+      ? 1.8 + bn * 1.2
+      : 1.0 + en * 0.8;
   }
 
   // ─────────────────────────────────────
@@ -436,12 +464,15 @@ export class MusicScene {
       bar.rotateY(Math.PI * 0.5);
     });
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   _onResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(w, h);
+    this.composer.setSize(w, h);
   }
 }
