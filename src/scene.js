@@ -8,8 +8,9 @@ import { THEMES } from './themes.js';
 const _MAX_PARTICLES = 4000;
 
 export class MusicScene {
-  constructor(canvas) {
+  constructor(canvas, { overlayMode = false } = {}) {
     this.canvas = canvas;
+    this.overlayMode = overlayMode;
     this.themeName = 'cosmic';
     this.theme = THEMES.cosmic;
     this.sensitivity = 1.0;
@@ -39,7 +40,7 @@ export class MusicScene {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
-      alpha: false,
+      alpha: this.overlayMode,
       preserveDrawingBuffer: true,
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -50,7 +51,9 @@ export class MusicScene {
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(this.theme.fog, 0.015);
+    if (!this.overlayMode) {
+      this.scene.fog = new THREE.FogExp2(this.theme.fog, 0.015);
+    }
   }
 
   _initCamera() {

@@ -520,6 +520,41 @@ html, body {
 
 .action-btn:active { transform: scale(0.96); }
 
+/* ───────── OBS 오버레이 버튼 ───────── */
+.obs-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(99, 202, 183, 0.35);
+  border-radius: 10px;
+  background: rgba(99, 202, 183, 0.08);
+  color: #63cab7;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.obs-btn:hover {
+  background: rgba(99, 202, 183, 0.18);
+  color: #a5f3e8;
+}
+
+.obs-btn:active { transform: scale(0.96); }
+
+/* ───────── Overlay 모드 (OBS 브라우저 소스) ───────── */
+body.overlay-mode {
+  background: transparent !important;
+}
+
+body.overlay-mode #ui,
+body.overlay-mode #drop-overlay {
+  display: none !important;
+}
+
 /* ───────── Keyboard Hints ───────── */
 #shortcuts-hint {
   font-size: 10px;

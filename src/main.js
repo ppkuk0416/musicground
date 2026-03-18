@@ -2,10 +2,21 @@ import { AudioAnalyzer } from './audioAnalyzer.js';
 import { MusicScene } from './scene.js';
 
 // ─────────────────────────────────────
+//  URL 파라미터 파싱
+// ─────────────────────────────────────
+const _params = new URLSearchParams(location.search);
+const OVERLAY_MODE  = _params.get('overlay') === 'true';
+const PARAM_THEME   = _params.get('theme');    // cosmic|ocean|forest|fire
+const PARAM_SENS    = parseFloat(_params.get('sensitivity') || '1');
+const PARAM_SOURCE  = _params.get('source');   // mic|system
+
+if (OVERLAY_MODE) document.body.classList.add('overlay-mode');
+
+// ─────────────────────────────────────
 //  앱 초기화
 // ─────────────────────────────────────
 const canvas = document.getElementById('bg');
-const scene = new MusicScene(canvas);
+const scene = new MusicScene(canvas, { overlayMode: OVERLAY_MODE });
 const analyzer = new AudioAnalyzer();
 
 // UI 요소
@@ -454,6 +465,54 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
   });
 }
+
+// ─────────────────────────────────────
+//  URL 파라미터 초기값 적용
+// ─────────────────────────────────────
+(function applyUrlParams() {
+  // 테마
+  const validThemes = ['cosmic', 'ocean', 'forest', 'fire'];
+  if (PARAM_THEME && validThemes.includes(PARAM_THEME)) {
+    scene.setTheme(PARAM_THEME);
+    syncThemeBtn(PARAM_THEME);
+  }
+
+  // 감도
+  if (!isNaN(PARAM_SENS) && PARAM_SENS > 0) {
+    const clamped = Math.min(Math.max(PARAM_SENS, 0.3), 3);
+    scene.setSensitivity(clamped);
+    sliderSensitivity.value = clamped;
+    valSensitivity.textContent = `${clamped.toFixed(1)}×`;
+  }
+
+  // 오디오 소스 자동 시작 (마이크 또는 시스템)
+  if (PARAM_SOURCE === 'mic' || PARAM_SOURCE === 'system') {
+    window.addEventListener('load', () => startAudio(PARAM_SOURCE), { once: true });
+  }
+})();
+
+// ─────────────────────────────────────
+//  OBS 소스 URL 복사
+// ─────────────────────────────────────
+const btnObsCopy = document.getElementById('btn-obs-copy');
+
+btnObsCopy.addEventListener('click', () => {
+  const activeThemeBtn = [...themeBtns].find(b => b.classList.contains('active'));
+  const theme = activeThemeBtn?.dataset.theme ?? 'cosmic';
+  const sens  = parseFloat(sliderSensitivity.value).toFixed(1);
+
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('overlay', 'true');
+  url.searchParams.set('theme', theme);
+  url.searchParams.set('sensitivity', sens);
+  url.searchParams.set('source', 'system');
+
+  navigator.clipboard.writeText(url.toString()).then(() => {
+    btnObsCopy.textContent = '복사됨!';
+    setTimeout(() => { btnObsCopy.textContent = 'OBS 소스 복사'; }, 2000);
+  });
+});
 
 // PWA 설치 프롬프트
 let _deferredInstall = null;
